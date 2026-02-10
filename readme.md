@@ -11,9 +11,10 @@ python main.py --enable-manager-legacy-ui
 ## Установка бота + моделей
 cd && git clone https://github.com/s13bby/tgbotcomf.git
 
-cd tgbotcomf/ && tar -xf models_and_nodes.tar.xz && mv models/ custom_nodes/ bot.py bot.db down_models.sh video_generate.json ~/ComfyUI/
+cd tgbotcomf/ && tar -xf models_and_nodes.tar.xz && mv models/ custom_nodes/ bot.py bot.db down_models.sh video_generate.json bot-requirements.txt ~/ComfyUI/
 chmod +x tgbotcomf/scut.sh && mv tgbotcomf/scut.sh ~/
 bash ~/ComfyUI/down_models.sh 
+source ComfyUI/venv/bin/activate && pip install -r bot-requirements.txt
 
 ## Установка screen
 arch

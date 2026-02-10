@@ -19,8 +19,8 @@ BACK_CALLBACK = "back_to_main"
 COMFYUI_WORKFLOW = "video_generate.json"
 TELEGRAM_TOKEN = "TELEGRAM_TOKEN"
 COMFYUI_URL = "http://127.0.0.1:8188"
-COMFYUI_OUTPUT_DIR = "~/ComfyUI/output"
-COMFYUI_INPUT_DIR = "~/ComfyUI/input"
+COMFYUI_OUTPUT_DIR = "output/"
+COMFYUI_INPUT_DIR = "input/"
 COMFYUI_COMMON_PROMT = "woman take off her clothes, full nudity, full naked, pyssy, boobs, nipples. camera zooms out"
 COMFYUI_MAX_SIZE = 580
 ADMIN_IDS = [1145483994, 498845556, 111111111, 222222222, 333333333]
@@ -106,6 +106,18 @@ def find_video_output_node(workflow_dict):
             return node_id
     raise ValueError("No video output node with 'filename_prefix' found in workflow!")
 
+def find_latest_video(output_dir, extensions=('.mp4', '.webm', '.mkv')):
+    """Ищет самый свежий видеофайл в output_dir"""
+    all_videos = []
+    for root, _, files in os.walk(output_dir):
+        for f in files:
+            if f.lower().endswith(extensions):
+                full_path = os.path.join(root, f)
+                all_videos.append(full_path)
+    if not all_videos:
+        return None
+    return max(all_videos, key=os.path.getmtime)    
+
 def modify_workflow(workflow_str, prompt, image_filename, width, height, video_prefix):
     wf_raw = json.loads(workflow_str)
     wf = {}
@@ -148,66 +160,64 @@ def find_video_by_prefix(output_dir, prefix, extensions=('.mp4', '.webm', '.mkv'
             return max(matches, key=os.path.getmtime)
     return None
 
-async def run_comfyui_workflow(workflow_json_str, input_image_path, video_prefix):
-    
+async def run_comfyui_workflow(workflow_json_str, input_image_path, video_prefix, update: Update):
     workflow_dict = json.loads(workflow_json_str)
-    resp = requests.post(f"{COMFYUI_URL}/prompt", json={"prompt": workflow_dict})
-    if resp.status_code != 200:
-        raise Exception(f"ComfyUI API error {resp.status_code}: {resp.text[:500]}")
-    
-    prompt_id = resp.json()['prompt_id']
-    print(f"✅ Workflow started | prompt_id: {prompt_id} | prefix: {video_prefix}")
+    client_id = str(uuid.uuid4())
+-
+    async with aiohttp.ClientSession() as session:
+        async with session.post(f"{COMFYUI_URL}/prompt", json={
+            "prompt": workflow_dict,
+            "client_id": client_id
+        }) as resp:
+            if resp.status != 200:
+                raise Exception(f"ComfyUI API error {resp.status}")
+            prompt_id = (await resp.json())["prompt_id"]
 
-    max_wait = 750
-    for i in range(max_wait):
+    progress_msg = await update.message.reply_text("🚀 Запуск генерации...")
+    uri = f"ws://127.0.0.1:8188/ws?clientId={client_id}"
+
+    try:
+        async with websockets.connect(uri) as websocket:
+            while True:
+                try:
+                    msg = await asyncio.wait_for(websocket.recv(), timeout=300.0)
+                    data = json.loads(msg)
+
+                    if data["type"] == "executing":
+                        node = data["data"].get("node")
+                        if node is None:
+                            break
+                        try:
+                            await progress_msg.edit_text("🔄 Обрабатываю...")
+                        except BadRequest as e:
+                            if "Message is not modified" not in str(e):
+                                raise
+
+                    elif data["type"] == "progress":
+                        value = data["data"].get("value", 0)
+                        max_val = data["data"].get("max", 1)
+                        pct = int(100 * value / max_val) if max_val else 0
+                        await progress_msg.edit_text(f"⏳ Прогресс: {pct}%")
+
+                    elif data["type"] == "execution_error":
+                        err = data["data"].get("exception_message", "Ошибка")
+                        raise Exception(err)
+
+                except asyncio.TimeoutError:
+                    break
+
+    except Exception as e:
+        print(f"WebSocket error: {e}")
+
+    await progress_msg.edit_text("🎥 Собираю видео...")
+    for _ in range(60):
         await asyncio.sleep(2)
-        try:
-            history_resp = requests.get(f"{COMFYUI_URL}/history/{prompt_id}")
-            history = history_resp.json()
-            
-            if prompt_id not in history:
-                continue
-
-            exec_info = history[prompt_id].get("exec_info", {})
-            if "node_errors" in exec_info and exec_info["node_errors"]:
-                errors = list(exec_info["node_errors"].keys())
-                raise Exception(f"ComfyUI node execution failed at nodes: {errors}")
-
-            if history[prompt_id].get("status", {}).get("completed", False):
-                break
-        except Exception as e:
-            if i == max_wait - 1:
-                raise Exception(f"Error checking ComfyUI history: {str(e)}")
-    else:
-        raise Exception(f"Workflow timeout after 25 minutes (prompt_id: {prompt_id})")
-
-    for _ in range(30):
-        await asyncio.sleep(2)
-        video_path = find_video_by_prefix(COMFYUI_OUTPUT_DIR, video_prefix)
+        video_path = find_latest_video(COMFYUI_OUTPUT_DIR)
         if video_path and os.path.getsize(video_path) > 1024:
-            last_size = -1
-            stable = 0
-            for _ in range(5):
-                size = os.path.getsize(video_path)
-                if size == last_size:
-                    stable += 1
-                    if stable >= 2:
-                        break
-                else:
-                    stable = 0
-                last_size = size
-                await asyncio.sleep(1)
-            print(f"🎬 Video found: {video_path}")
+            await progress_msg.edit_text("✅ Готово!")
             return video_path
 
-    recent = []
-    for root, _, files in os.walk(COMFYUI_OUTPUT_DIR):
-        for f in sorted(files, key=lambda x: os.path.getmtime(os.path.join(root, x)), reverse=True)[:5]:
-            recent.append(os.path.relpath(os.path.join(root, f), COMFYUI_OUTPUT_DIR))
-    raise Exception(
-        f"Video with prefix '{video_prefix}' not found in output directory.\n"
-        f"Recent files:\n" + "\n".join(f"  - {f}" for f in recent)
-    )
+    raise Exception("Видео не найдено")
 
 def clean_metadata(video_path):
     temp_dir = os.path.dirname(video_path)
@@ -293,10 +303,6 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return WAITING_CONFIRM
 
-async def handle_photo_anywhere(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    return await handle_photo(update, context)
-
-
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -364,8 +370,8 @@ async def handle_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
         input_image_path = os.path.join(COMFYUI_INPUT_DIR, image_filename)
         shutil.copy(image_path, input_image_path)
 
-        with open(f'{COMFYUI_WORKFLOW}', 'r', encoding='utf-8') as f:
-            workflow_base = f.read()
+        async with aiofiles.open(COMFYUI_WORKFLOW, 'r', encoding='utf-8') as f:
+            workflow_base = await f.read()
 
         modified_workflow = modify_workflow(
             workflow_base,
@@ -376,7 +382,7 @@ async def handle_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
             video_prefix
         )
 
-        video_path = await run_comfyui_workflow(modified_workflow, input_image_path, video_prefix)
+        video_path = await run_comfyui_workflow(modified_workflow, input_image_path, video_prefix, update)
         video_path = clean_metadata(video_path)
 
         with open(video_path, 'rb') as video_file:
