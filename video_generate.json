@@ -1,0 +1,619 @@
+{
+  "86": {
+    "inputs": {
+      "add_noise": "enable",
+      "noise_seed": [
+        "155",
+        0
+      ],
+      "steps": 4,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "start_at_step": 0,
+      "end_at_step": 2,
+      "return_with_leftover_noise": "enable",
+      "model": [
+        "199:104",
+        0
+      ],
+      "positive": [
+        "190",
+        0
+      ],
+      "negative": [
+        "190",
+        1
+      ],
+      "latent_image": [
+        "219",
+        0
+      ]
+    },
+    "class_type": "KSamplerAdvanced",
+    "_meta": {
+      "title": "KSampler (Advanced)"
+    }
+  },
+  "87": {
+    "inputs": {
+      "samples": [
+        "221",
+        0
+      ],
+      "vae": [
+        "90",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "89": {
+    "inputs": {
+      "text": "Colorful tones, overexposed, static, blurred details, subtitles, style, works, paintings, pictures, stillness, overall gray, worst quality, low quality, JPEG compression residue, ugly, incomplete, extra fingers, poorly painted hands, poorly painted face, deformed, disfigured, deformed limbs, finger fusion, still picture, messy background, three legs, many people in the background, walking backwards, mosaic, cartoon collapse, drawing errors, chaotic lines, graffiti sense, CG sense is too strong, plastic texture, AI sense is too strong, stiff movements, puppet-like movements, rigid posture, lack of dynamics, smirk, facial stiffness, sluggish expression, loss of dynamics, lack of animation, low frame rate, torn movements, abnormal afterimages, body caton, weird head-body proportions, blurred eyes, misalignment of facial features, repetitive body parts, missing limbs, collapsed skin, perspective background error, unreasonable light and shadow, scene violation, clothes disappear out of thin air, incoherent clothes, deformed reproductive organs, mutant reproductive organs, excess reproductive organs, mutant penis, deformed penis, excess penis, painted Bad penis, mutant vagina, deformed vagina, extra vagina, poorly painted vagina, poorly painted reproductive organs, women do not have a vagina, men grow a vagina, men do not have a penis, slow-moving penis, slow-moving penis, deformed lips, mutant lips, poorly painted lips, deformed mouth, mutant mouth, poorly painted mouth, extra teeth, missing teeth, asymmetric lips, unnatural lipstick, lipstick smeared blurred, incoherent lips, poorly painted feet, mutant feet, deformed feet, dark lips, dark lipstick, red lipstick, red lips, deformed Face, mutant face, poorly painted face, facial deformation, multiple faces, inconsistent face shape, character identity change, blurred face, flickering face, distorted hands，Mutant hands, excess hands, limb piercing, distorted eyes, mutant eyes, poorly painted eyes, inconsistent eyes, pixelation, serrated, rough edges, serrated edges, artifacts, noise, blurred lines, distorted details, sharp edges, line shaking, out of focus, low resolution, wrong texture, realistic face, real eyelashes, real eyelashes, 3D eyelashes, real face, real people, real people, 3D people.",
+      "clip": [
+        "222",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Negative Prompt)"
+    }
+  },
+  "90": {
+    "inputs": {
+      "vae_name": "wan_2.1_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "93": {
+    "inputs": {
+      "text": "woman take off her clothes, full nudity, full naked, pyssy, boobs, nipples. camera zooms out",
+      "clip": [
+        "222",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Positive Prompt)"
+    }
+  },
+  "116": {
+    "inputs": {
+      "unet_name": "DasiwaWAN22I2V14BTastysinV8_q4High.gguf"
+    },
+    "class_type": "UnetLoaderGGUF",
+    "_meta": {
+      "title": "Unet Loader (GGUF) - High"
+    }
+  },
+  "117": {
+    "inputs": {
+      "unet_name": "DasiwaWAN22I2V14BTastysinV8_q4Low.gguf"
+    },
+    "class_type": "UnetLoaderGGUF",
+    "_meta": {
+      "title": "Unet Loader (GGUF) - Low"
+    }
+  },
+  "121": {
+    "inputs": {
+      "frame_rate": 10,
+      "loop_count": 0,
+      "filename_prefix": "video",
+      "format": "video/h264-mp4",
+      "pix_fmt": "yuv420p",
+      "crf": 8,
+      "save_metadata": true,
+      "trim_to_audio": false,
+      "pingpong": false,
+      "save_output": false,
+      "images": [
+        "87",
+        0
+      ]
+    },
+    "class_type": "VHS_VideoCombine",
+    "_meta": {
+      "title": "Video Combine 🎥🅥🅗🅢"
+    }
+  },
+  "144": {
+    "inputs": {
+      "PowerLoraLoaderHeaderWidget": {
+        "type": "PowerLoraLoaderHeaderWidget"
+      },
+      "lora_1": {
+        "on": false,
+        "lora": "DR34ML4Y_I2V_14B_HIGH_V2.safetensors",
+        "strength": 0.4
+      },
+      "lora_2": {
+        "on": false,
+        "lora": "wan2.2-i2v-high-oral-insertion-v1.0.safetensors",
+        "strength": 1
+      },
+      "lora_3": {
+        "on": false,
+        "lora": "SmoothXXXAnimation_High.safetensors",
+        "strength": 1.5
+      },
+      "lora_4": {
+        "on": false,
+        "lora": "2D_animation_effects_high_noise.safetensors",
+        "strength": 0.4
+      },
+      "lora_5": {
+        "on": false,
+        "lora": "NSFW-22-H-e8.safetensors",
+        "strength": 1
+      },
+      "lora_6": {
+        "on": false,
+        "lora": "BounceHighWan2_2.safetensors",
+        "strength": 0.2
+      },
+      "➕ Add Lora": "",
+      "model": [
+        "116",
+        0
+      ]
+    },
+    "class_type": "Power Lora Loader (rgthree)",
+    "_meta": {
+      "title": "LORAS - HIGH NOISE"
+    }
+  },
+  "145": {
+    "inputs": {
+      "PowerLoraLoaderHeaderWidget": {
+        "type": "PowerLoraLoaderHeaderWidget"
+      },
+      "lora_1": {
+        "on": false,
+        "lora": "DR34ML4Y_I2V_14B_LOW_V2.safetensors",
+        "strength": 0.4
+      },
+      "lora_2": {
+        "on": false,
+        "lora": "wan2.2-i2v-low-oral-insertion-v1.0.safetensors",
+        "strength": 1
+      },
+      "lora_3": {
+        "on": false,
+        "lora": "SmoothXXXAnimation_Low.safetensors",
+        "strength": 1.5
+      },
+      "lora_4": {
+        "on": false,
+        "lora": "2D_animation_effects_low_noise.safetensors",
+        "strength": 0.4
+      },
+      "lora_5": {
+        "on": false,
+        "lora": "NSFW-22-L-e8.safetensors",
+        "strength": 1
+      },
+      "lora_6": {
+        "on": false,
+        "lora": "BounceLowWan2_2.safetensors",
+        "strength": 0.2
+      },
+      "➕ Add Lora": "",
+      "model": [
+        "117",
+        0
+      ]
+    },
+    "class_type": "Power Lora Loader (rgthree)",
+    "_meta": {
+      "title": "LORAS - LOW NOISE"
+    }
+  },
+  "146": {
+    "inputs": {
+      "anything": [
+        "217",
+        0
+      ]
+    },
+    "class_type": "easy cleanGpuUsed",
+    "_meta": {
+      "title": "Clean VRAM Used"
+    }
+  },
+  "149": {
+    "inputs": {
+      "ckpt_name": "rife49.pth",
+      "clear_cache_after_n_frames": 1,
+      "multiplier": 2,
+      "fast_mode": false,
+      "ensemble": true,
+      "scale_factor": 1,
+      "frames": [
+        "223",
+        0
+      ]
+    },
+    "class_type": "RIFE VFI",
+    "_meta": {
+      "title": "Frame Interpolation (RIFE)"
+    }
+  },
+  "155": {
+    "inputs": {
+      "seed": -1
+    },
+    "class_type": "Seed (rgthree)",
+    "_meta": {
+      "title": "Seed (rgthree)"
+    }
+  },
+  "183": {
+    "inputs": {
+      "value": 842
+    },
+    "class_type": "INTConstant",
+    "_meta": {
+      "title": "HEIGHT"
+    }
+  },
+  "184": {
+    "inputs": {
+      "value": 474
+    },
+    "class_type": "INTConstant",
+    "_meta": {
+      "title": "WIDTH"
+    }
+  },
+  "190": {
+    "inputs": {
+      "width": [
+        "193",
+        2
+      ],
+      "height": [
+        "193",
+        3
+      ],
+      "length": 41,
+      "batch_size": 1,
+      "motion_amplitude": 1.4,
+      "positive": [
+        "93",
+        0
+      ],
+      "negative": [
+        "89",
+        0
+      ],
+      "vae": [
+        "90",
+        0
+      ],
+      "start_image": [
+        "193",
+        0
+      ]
+    },
+    "class_type": "PainterI2V",
+    "_meta": {
+      "title": "PainterI2V"
+    }
+  },
+  "193": {
+    "inputs": {
+      "image": "742cad1b01e30ef47b613ef3df009957.jpg",
+      "resize": true,
+      "width": [
+        "184",
+        0
+      ],
+      "height": [
+        "183",
+        0
+      ],
+      "repeat": 1,
+      "keep_proportion": false,
+      "divisible_by": 16,
+      "mask_channel": "alpha",
+      "background_color": ""
+    },
+    "class_type": "LoadAndResizeImage",
+    "_meta": {
+      "title": "START IMAGE"
+    }
+  },
+  "210": {
+    "inputs": {
+      "model_name": "2x-AnimeSharpV4_RCAN.safetensors"
+    },
+    "class_type": "UpscaleModelLoader",
+    "_meta": {
+      "title": "Load Upscale Model"
+    }
+  },
+  "214": {
+    "inputs": {
+      "frame_rate": 20,
+      "loop_count": 1,
+      "filename_prefix": "AnimateDiff",
+      "format": "video/h264-mp4",
+      "pix_fmt": "yuv420p",
+      "crf": 8,
+      "save_metadata": true,
+      "trim_to_audio": false,
+      "pingpong": false,
+      "save_output": true,
+      "images": [
+        "224",
+        0
+      ]
+    },
+    "class_type": "VHS_VideoCombine",
+    "_meta": {
+      "title": "FIENAL"
+    }
+  },
+  "217": {
+    "inputs": {
+      "add_noise": "disable",
+      "noise_seed": 666124386785654,
+      "steps": 4,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "start_at_step": 2,
+      "end_at_step": 4,
+      "return_with_leftover_noise": "disable",
+      "model": [
+        "200:103",
+        0
+      ],
+      "positive": [
+        "190",
+        0
+      ],
+      "negative": [
+        "190",
+        1
+      ],
+      "latent_image": [
+        "86",
+        0
+      ]
+    },
+    "class_type": "KSamplerAdvanced",
+    "_meta": {
+      "title": "KSampler (Advanced)"
+    }
+  },
+  "219": {
+    "inputs": {
+      "anything": [
+        "190",
+        2
+      ]
+    },
+    "class_type": "easy cleanGpuUsed",
+    "_meta": {
+      "title": "Clean VRAM Used"
+    }
+  },
+  "221": {
+    "inputs": {
+      "anything": [
+        "146",
+        0
+      ]
+    },
+    "class_type": "easy clearCacheAll",
+    "_meta": {
+      "title": "Clear Cache All"
+    }
+  },
+  "222": {
+    "inputs": {
+      "clip_name": "nsfw_wan_umt5-xxl_fp8_scaled.safetensors",
+      "type": "wan",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "223": {
+    "inputs": {
+      "upscale_model": [
+        "210",
+        0
+      ],
+      "image": [
+        "87",
+        0
+      ]
+    },
+    "class_type": "ImageUpscaleWithModel",
+    "_meta": {
+      "title": "Upscale Image (using Model)"
+    }
+  },
+  "224": {
+    "inputs": {
+      "anything": [
+        "225",
+        0
+      ]
+    },
+    "class_type": "easy clearCacheAll",
+    "_meta": {
+      "title": "Clear Cache All"
+    }
+  },
+  "225": {
+    "inputs": {
+      "anything": [
+        "149",
+        0
+      ]
+    },
+    "class_type": "easy cleanGpuUsed",
+    "_meta": {
+      "title": "Clean VRAM Used"
+    }
+  },
+  "200:200": {
+    "inputs": {
+      "value": 10
+    },
+    "class_type": "PrimitiveFloat",
+    "_meta": {
+      "title": "SHIFT"
+    }
+  },
+  "199:204": {
+    "inputs": {
+      "value": 10
+    },
+    "class_type": "PrimitiveFloat",
+    "_meta": {
+      "title": "SHIFT"
+    }
+  },
+  "199:195": {
+    "inputs": {
+      "sage_attention": "auto",
+      "allow_compile": true,
+      "model": [
+        "144",
+        0
+      ]
+    },
+    "class_type": "PathchSageAttentionKJ",
+    "_meta": {
+      "title": "Patch Sage Attention KJ"
+    }
+  },
+  "200:196": {
+    "inputs": {
+      "sage_attention": "auto",
+      "allow_compile": true,
+      "model": [
+        "145",
+        0
+      ]
+    },
+    "class_type": "PathchSageAttentionKJ",
+    "_meta": {
+      "title": "Patch Sage Attention KJ"
+    }
+  },
+  "199:197": {
+    "inputs": {
+      "enable_fp16_accumulation": true,
+      "model": [
+        "199:195",
+        0
+      ]
+    },
+    "class_type": "ModelPatchTorchSettings",
+    "_meta": {
+      "title": "Model Patch Torch Settings"
+    }
+  },
+  "200:198": {
+    "inputs": {
+      "enable_fp16_accumulation": true,
+      "model": [
+        "200:196",
+        0
+      ]
+    },
+    "class_type": "ModelPatchTorchSettings",
+    "_meta": {
+      "title": "Model Patch Torch Settings"
+    }
+  },
+  "199:124": {
+    "inputs": {
+      "nag_scale": 11,
+      "nag_alpha": 0.25,
+      "nag_tau": 2.5,
+      "input_type": "default",
+      "model": [
+        "199:197",
+        0
+      ],
+      "conditioning": [
+        "89",
+        0
+      ]
+    },
+    "class_type": "WanVideoNAG",
+    "_meta": {
+      "title": "WanVideoNAG-High"
+    }
+  },
+  "200:127": {
+    "inputs": {
+      "nag_scale": 11,
+      "nag_alpha": 0.25,
+      "nag_tau": 2.5,
+      "input_type": "default",
+      "model": [
+        "200:198",
+        0
+      ],
+      "conditioning": [
+        "89",
+        0
+      ]
+    },
+    "class_type": "WanVideoNAG",
+    "_meta": {
+      "title": "WanVideoNAG-Low"
+    }
+  },
+  "199:104": {
+    "inputs": {
+      "shift": [
+        "199:204",
+        0
+      ],
+      "model": [
+        "199:124",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingSD3",
+    "_meta": {
+      "title": "ModelSamplingSD3"
+    }
+  },
+  "200:103": {
+    "inputs": {
+      "shift": [
+        "200:200",
+        0
+      ],
+      "model": [
+        "200:127",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingSD3",
+    "_meta": {
+      "title": "ModelSamplingSD3"
+    }
+  }
+}

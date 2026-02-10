@@ -9,20 +9,24 @@ from PIL import Image
 import subprocess
 import requests
 import shutil
-from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler
+import glob
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler, CallbackQueryHandler
 
-# === КОНФИГУРАЦИЯ ===
-TELEGRAM_TOKEN = "7829006328:AAFOyk-CHv5Eg0POH2qnIuOP0elGGyE-c_A"
+RULES_CALLBACK = "show_rules"
+BACK_CALLBACK = "back_to_main"
+
+COMFYUI_WORKFLOW = "video_generate.json"
+TELEGRAM_TOKEN = "TELEGRAM_TOKEN"
 COMFYUI_URL = "http://127.0.0.1:8188"
-COMFYUI_OUTPUT_DIR = "/home/ivan/comfy/ComfyUI/output"  # Единая переменная для пути к output
-COMFYUI_INPUT_DIR = "/home/ivan/comfy/ComfyUI/input"    # Единая переменная для пути к input
+COMFYUI_OUTPUT_DIR = "/home/ivan/ComfyUI/output" # <-- сменить на относительный путь
+COMFYUI_INPUT_DIR = "/home/ivan/ComfyUI/input"   # <-- сменить на относительный путь
+COMFYUI_COMMON_PROMT = "woman take off her clothes, full nudity, full naked, pyssy, boobs, nipples. camera zooms out"
+COMFYUI_MAX_SIZE = 580
 ADMIN_IDS = [1145483994, 498845556, 111111111, 222222222, 333333333]
 
-# Состояния разговора
-WAITING_PROMPT, WAITING_CONFIRM = range(2)
+WAITING_CONFIRM = 0
 
-# === ИНИЦИАЛИЗАЦИЯ БД ===
 def init_db():
     conn = sqlite3.connect('bot.db')
     c = conn.cursor()
@@ -32,8 +36,26 @@ def init_db():
         balance INTEGER DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS admin_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        admin_id INTEGER NOT NULL,
+        admin_username TEXT,
+        target_user_id INTEGER NOT NULL,
+        tokens_added INTEGER NOT NULL,
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
     conn.commit()
     conn.close()
+
+def log_admin_action(admin_id, admin_username, target_user_id, tokens):
+    """Записывает действие админа в файл"""
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    log_entry = (
+        f"[{timestamp}] Admin {admin_id} (@{admin_username}) "
+        f"added {tokens} tokens to user {target_user_id}\n"
+    )
+    with open('admin_actions.log', 'a', encoding='utf-8') as f:
+        f.write(log_entry)
 
 def get_user_balance(user_id):
     conn = sqlite3.connect('bot.db')
@@ -64,8 +86,7 @@ def deduct_balance(user_id, amount):
     conn.commit()
     conn.close()
 
-# === ОБРАБОТКА ИЗОБРАЖЕНИЯ ===
-def resize_image(image_path, max_size=600):
+def resize_image(image_path, max_size=COMFYUI_MAX_SIZE):
     with Image.open(image_path) as img:
         img = img.convert('RGBA')
         width, height = img.size
@@ -78,15 +99,31 @@ def resize_image(image_path, max_size=600):
         resized = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
         return new_width, new_height, resized
 
-# === МОДИФИКАЦИЯ WORKFLOW ===
-def modify_workflow(workflow_str, prompt, image_filename, width, height, video_prefix):
-    wf = json.loads(workflow_str)
-    
-    # Prompt
-    if '93' in wf and 'inputs' in wf['93']:
-        wf['93']['inputs']['text'] = prompt
+def find_video_output_node(workflow_dict):
+    for node_id, node in workflow_dict.items():
+        inputs = node.get("inputs", {})
+        if isinstance(inputs, dict) and "filename_prefix" in inputs:
+            return node_id
+    raise ValueError("No video output node with 'filename_prefix' found in workflow!")
 
-    # Размеры (округляем до 16)
+def modify_workflow(workflow_str, prompt, image_filename, width, height, video_prefix):
+    wf_raw = json.loads(workflow_str)
+    wf = {}
+    for key, value in wf_raw.items():
+        clean_key = key.strip()
+        if isinstance(value, dict) and 'inputs' in value:
+            inputs_raw = value['inputs']
+            if isinstance(inputs_raw, dict):
+                clean_inputs = {}
+                for in_key, in_val in inputs_raw.items():
+                    clean_inputs[in_key.strip()] = in_val
+                value = {k: v for k, v in value.items() if k != 'inputs'}
+                value['inputs'] = clean_inputs
+        wf[clean_key] = value
+
+    if '93' in wf and 'inputs' in wf['93']:
+        wf['93']['inputs']['text'] = f"{COMFYUI_COMMON_PROMT}"
+
     height = (height // 16) * 16
     width = (width // 16) * 16
 
@@ -95,74 +132,88 @@ def modify_workflow(workflow_str, prompt, image_filename, width, height, video_p
     if '184' in wf and 'inputs' in wf['184']:
         wf['184']['inputs']['value'] = width
 
-    # Изображение
     if '193' in wf and 'inputs' in wf['193']:
         wf['193']['inputs']['image'] = image_filename
 
-    # Уникальный префикс для видео (нода 214 - FIENAL)
     if '214' in wf and 'inputs' in wf['214']:
         wf['214']['inputs']['filename_prefix'] = video_prefix
 
     return json.dumps(wf)
 
-# === ЗАПУСК WORKFLOW ===
-async def run_comfyui_workflow(workflow_json_str, image_path, video_prefix):
-    # 1. Копируем изображение в input директорию
-    os.makedirs(COMFYUI_INPUT_DIR, exist_ok=True)
-    image_filename = f"user_image_{uuid.uuid4().hex[:8]}.png"
-    input_path = os.path.join(COMFYUI_INPUT_DIR, image_filename)
-    shutil.copy(image_path, input_path)
+def find_video_by_prefix(output_dir, prefix, extensions=('.mp4', '.webm', '.mkv')):
+    for ext in extensions:
+        pattern = os.path.join(output_dir, '**', f"{prefix}*{ext}")
+        matches = glob.glob(pattern, recursive=True)
+        if matches:
+            return max(matches, key=os.path.getmtime)
+    return None
 
-    # 2. Отправляем workflow в ComfyUI
-    workflow_dict = json.loads(workflow_json_str)
-    payload = {"prompt": workflow_dict}  # ВАЖНО: без пробела в ключе "prompt"
+async def run_comfyui_workflow(workflow_json_str, input_image_path, video_prefix):
     
-    resp = requests.post(f"{COMFYUI_URL}/prompt", json=payload)
+    workflow_dict = json.loads(workflow_json_str)
+    resp = requests.post(f"{COMFYUI_URL}/prompt", json={"prompt": workflow_dict})
     if resp.status_code != 200:
-        raise Exception(f"ComfyUI error {resp.status_code}: {resp.text[:500]}")
+        raise Exception(f"ComfyUI API error {resp.status_code}: {resp.text[:500]}")
     
     prompt_id = resp.json()['prompt_id']
-    print(f"Запущен prompt_id: {prompt_id}")
+    print(f"✅ Workflow started | prompt_id: {prompt_id} | prefix: {video_prefix}")
 
-    # 3. Ждём завершения и ищем видео по уникальному префиксу
-    max_wait = 2600  # 10 минут
+    max_wait = 750
     for i in range(max_wait):
         await asyncio.sleep(2)
         try:
             history_resp = requests.get(f"{COMFYUI_URL}/history/{prompt_id}")
             history = history_resp.json()
             
-            if prompt_id in history:
-                # Ищем файл в output директории по уникальному префиксу
-                os.makedirs(COMFYUI_OUTPUT_DIR, exist_ok=True)
-                for filename in sorted(os.listdir(COMFYUI_OUTPUT_DIR), reverse=True):
-                    if filename.startswith(video_prefix) and filename.endswith(('.mp4', '.webm')):
-                        video_path = os.path.join(COMFYUI_OUTPUT_DIR, filename)
-                        if os.path.exists(video_path) and os.path.getsize(video_path) > 0:
-                            print(f"Видео найдено: {video_path}")
-                            # Удаляем исходное изображение из input
-                            if os.path.exists(input_path):
-                                os.unlink(input_path)
-                            return video_path
-                # Если файл ещё не записан полностью — ждём
-                if i < max_wait - 1:
-                    continue
-                else:
-                    raise Exception(f"Видео с префиксом '{video_prefix}' не найдено после {max_wait*2} секунд")
+            if prompt_id not in history:
+                continue
+
+            exec_info = history[prompt_id].get("exec_info", {})
+            if "node_errors" in exec_info and exec_info["node_errors"]:
+                errors = list(exec_info["node_errors"].keys())
+                raise Exception(f"ComfyUI node execution failed at nodes: {errors}")
+
+            if history[prompt_id].get("status", {}).get("completed", False):
+                break
         except Exception as e:
             if i == max_wait - 1:
-                raise Exception(f"Ошибка при ожидании результата: {str(e)}")
-    
-    raise Exception("Таймаут генерации")
+                raise Exception(f"Error checking ComfyUI history: {str(e)}")
+    else:
+        raise Exception(f"Workflow timeout after 25 minutes (prompt_id: {prompt_id})")
 
-# === ОЧИСТКА МЕТАДАННЫХ БЕЗ ОШИБКИ КРОСС-ДЕВАЙС ===
+    for _ in range(30):
+        await asyncio.sleep(2)
+        video_path = find_video_by_prefix(COMFYUI_OUTPUT_DIR, video_prefix)
+        if video_path and os.path.getsize(video_path) > 1024:
+            last_size = -1
+            stable = 0
+            for _ in range(5):
+                size = os.path.getsize(video_path)
+                if size == last_size:
+                    stable += 1
+                    if stable >= 2:
+                        break
+                else:
+                    stable = 0
+                last_size = size
+                await asyncio.sleep(1)
+            print(f"🎬 Video found: {video_path}")
+            return video_path
+
+    recent = []
+    for root, _, files in os.walk(COMFYUI_OUTPUT_DIR):
+        for f in sorted(files, key=lambda x: os.path.getmtime(os.path.join(root, x)), reverse=True)[:5]:
+            recent.append(os.path.relpath(os.path.join(root, f), COMFYUI_OUTPUT_DIR))
+    raise Exception(
+        f"Video with prefix '{video_prefix}' not found in output directory.\n"
+        f"Recent files:\n" + "\n".join(f"  - {f}" for f in recent)
+    )
+
 def clean_metadata(video_path):
-    # Используем временную директорию на том же диске, что и output
     temp_dir = os.path.dirname(video_path)
-    temp_video = tempfile.NamedTemporaryFile(suffix='.mp4', dir=temp_dir, delete=False)
-    temp_path = temp_video.name
-    temp_video.close()
-    
+    with tempfile.NamedTemporaryFile(suffix='.mp4', dir=temp_dir, delete=False) as tmp:
+        temp_path = tmp.name
+
     try:
         subprocess.run([
             'ffmpeg', '-y', '-i', video_path,
@@ -173,24 +224,27 @@ def clean_metadata(video_path):
             temp_path
         ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         
-        # Безопасная замена: копируем + удаляем (работает между файловыми системами)
         shutil.copy2(temp_path, video_path)
         os.unlink(temp_path)
         return video_path
     except Exception as e:
         if os.path.exists(temp_path):
             os.unlink(temp_path)
-        raise Exception(f"Ошибка очистки метаданных: {str(e)}")
+        raise Exception(f"Metadata cleanup failed: {str(e)}")
 
-# === ХЕНДЛЕРЫ ===
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     add_user(user.id, user.username)
     balance = get_user_balance(user.id)
+    keyboard = [[InlineKeyboardButton("ПРАВИЛА", callback_data=RULES_CALLBACK)]]
     await update.message.reply_text(
-        f"Привет, {user.first_name}! Добро пожаловать в бот для генерации видео.\n"
-        f"Ваш баланс: {balance} токенов.\n"
-        "Отправьте фото для генерации."
+        f"👋🏻 Привет, Творец!\n\n"
+        "Рада видеть тебя в SecretRoom\n\n"
+        "✅ Любая фантазия о которой ты мечтал оживёт в этом боте\n\n"
+        "Жми «🔮 Оживить фото» и наслаждайся\n\n"
+        "Стоимость: 20 токен за запрос.\n\n"
+        f"Ваш баланс: {balance} токенов.",
+        reply_markup=InlineKeyboardMarkup(keyboard),
     )
     return ConversationHandler.END
 
@@ -202,50 +256,33 @@ async def handle_admin_add(update: Update, context: ContextTypes.DEFAULT_TYPE):
         tokens = int(context.args[0])
         target_id = int(context.args[1])
         update_balance(target_id, tokens)
+        log_admin_action(
+            update.effective_user.id,
+            update.effective_user.username or 'unknown',
+            target_id,
+            tokens
+        )
         await update.message.reply_text(f"Добавлено {tokens} токенов пользователю {target_id}.")
     except (IndexError, ValueError):
         await update.message.reply_text("Использование: /add <токены> <user_id>")
 
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     photo_file = await update.message.photo[-1].get_file()
-    temp_image = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
-    await photo_file.download_to_drive(temp_image.name)
+    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+        temp_image = tmp.name
+    await photo_file.download_to_drive(temp_image)
 
-    width, height, resized_img = resize_image(temp_image.name)
-    resized_path = temp_image.name.replace('.png', '_resized.png')
-    resized_img.save(resized_path)
-    os.unlink(temp_image.name)
+    width, height, resized_img = resize_image(temp_image)
+    resized_path = temp_image.replace('.png', '_resized.png')
+    resized_img.save(resized_path, format='PNG')
+    os.unlink(temp_image)
 
     context.user_data['image_path'] = resized_path
     context.user_data['width'] = width
     context.user_data['height'] = height
 
-    await update.message.reply_text(
-        f"Картинка получена и масштабирована до {width}x{height}.\n"
-        "Введите промпт на английском:"
-    )
-    return WAITING_PROMPT
-
-async def handle_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    prompt = update.message.text.strip()
-    context.user_data['prompt'] = prompt
-    
-    # Генерируем уникальный префикс для видео
     video_prefix = f"video_{uuid.uuid4().hex[:12]}"
     context.user_data['video_prefix'] = video_prefix
-    
-    with open('main.json', 'r', encoding='utf-8') as f:
-        workflow = f.read()
-
-    image_filename = os.path.basename(context.user_data['image_path'])
-    modified_workflow = modify_workflow(
-        workflow, 
-        prompt, 
-        image_filename,
-        context.user_data['width'], 
-        context.user_data['height'],
-        video_prefix
-    )
 
     cost = 20
     balance = get_user_balance(update.effective_user.id)
@@ -256,11 +293,54 @@ async def handle_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return WAITING_CONFIRM
 
+async def handle_photo_anywhere(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    return await handle_photo(update, context)
+
+
+async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == RULES_CALLBACK:
+        keyboard = [[InlineKeyboardButton("← Назад", callback_data=BACK_CALLBACK)]]
+        await query.message.reply_text(
+            "🖼 Творец, отправь фото ниже!:\n\n"
+            "Выбери фото человека или из аниме🙈:\n\n"
+            "Для лучшего результата следуй этим правилам:\n\n"
+            "✅ Фотография в полный рост\n"
+            "✅ Девушка смотрит прямо в камеру\n"
+            "✅ Хорошее освещение\n"
+            "❌ Нет солнцезащитных очков\n"
+            "❌ Не закрывать лицо волосами",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+        await query.message.delete()
+    
+    elif query.data == BACK_CALLBACK:
+        context.user_data.clear()
+        
+        user = update.effective_user
+        add_user(user.id, user.username)
+        balance = get_user_balance(user.id)
+        keyboard = [[InlineKeyboardButton("ПРАВИЛА", callback_data=RULES_CALLBACK)]]
+        await query.message.reply_text(
+            f"👋🏻 Привет, Творец!\n\n"
+            "Рада видеть тебя в SecretRoom\n\n"
+            "✅ Любая фантазия о которой ты мечтал оживёт в этом боте\n\n"
+            "Жми «🔮 Оживить фото» и наслаждайся\n\n"
+            "Стоимость: 20 токен за запрос.\n\n"
+            f"Ваш баланс: {balance} токенов.",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+        await query.message.delete()
+
 async def handle_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.text.lower() not in ['да', 'yes', 'y']:
+    text = update.message.text.lower()
+    if text not in ['да', 'yes', 'y']:
         await update.message.reply_text("Операция отменена.")
-        if 'image_path' in context.user_data and os.path.exists(context.user_data['image_path']):
-            os.unlink(context.user_data['image_path'])
+        image_path = context.user_data.get('image_path')
+        if image_path and os.path.exists(image_path):
+            os.unlink(image_path)
         context.user_data.clear()
         return ConversationHandler.END
 
@@ -275,53 +355,43 @@ async def handle_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🚀 Начинаю генерацию...")
 
     try:
+        user_id = update.effective_user.id
         image_path = context.user_data['image_path']
-        prompt = context.user_data['prompt']
         video_prefix = context.user_data['video_prefix']
 
-        with open('main.json', 'r', encoding='utf-8') as f:
+        os.makedirs(COMFYUI_INPUT_DIR, exist_ok=True)
+        image_filename = f"user_image_{uuid.uuid4().hex[:12]}.png"
+        input_image_path = os.path.join(COMFYUI_INPUT_DIR, image_filename)
+        shutil.copy(image_path, input_image_path)
+
+        with open(f'{COMFYUI_WORKFLOW}', 'r', encoding='utf-8') as f:
             workflow_base = f.read()
 
-        # Копируем изображение в input директорию
-        os.makedirs(COMFYUI_INPUT_DIR, exist_ok=True)
-        image_filename = f"user_image_{uuid.uuid4().hex[:8]}.png"
-        input_path = os.path.join(COMFYUI_INPUT_DIR, image_filename)
-        shutil.copy(image_path, input_path)
-
-        workflow_json = modify_workflow(
-            workflow_base, 
-            prompt, 
+        modified_workflow = modify_workflow(
+            workflow_base,
+            "",
             image_filename,
-            context.user_data['width'], 
+            context.user_data['width'],
             context.user_data['height'],
             video_prefix
         )
 
-        # Запускаем генерацию
-        video_path = await run_comfyui_workflow(workflow_json, image_path, video_prefix)
-        
-        # Очищаем метаданные
+        video_path = await run_comfyui_workflow(modified_workflow, input_image_path, video_prefix)
         video_path = clean_metadata(video_path)
-        
-        # Отправляем видео
+
         with open(video_path, 'rb') as video_file:
             await update.message.reply_video(video_file, supports_streaming=True)
-        
+
         await update.message.reply_text("✅ Генерация завершена!")
-        
-        # Удаляем файлы
-        if os.path.exists(image_path):
-            os.unlink(image_path)
-        if os.path.exists(video_path):
-            os.unlink(video_path)
-        if os.path.exists(input_path):
-            os.unlink(input_path)
-            
+
+        for p in [image_path, input_image_path, video_path]:
+            if os.path.exists(p):
+                os.unlink(p)
+
     except Exception as e:
         await update.message.reply_text(f"❌ Ошибка генерации: {str(e)}")
-        update_balance(user_id, cost)  # Возврат токенов
-    
-    # Показываем баланс
+        update_balance(user_id, cost) 
+
     new_balance = get_user_balance(user_id)
     await update.message.reply_text(f"Ваш баланс: {new_balance} токенов.")
     context.user_data.clear()
@@ -329,20 +399,20 @@ async def handle_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Отменено.")
-    if 'image_path' in context.user_data and os.path.exists(context.user_data['image_path']):
-        os.unlink(context.user_data['image_path'])
+    image_path = context.user_data.get('image_path')
+    if image_path and os.path.exists(image_path):
+        os.unlink(image_path)
     context.user_data.clear()
     return ConversationHandler.END
 
-# === ЗАПУСК БОТА ===
 def main():
     init_db()
     app = Application.builder().token(TELEGRAM_TOKEN).build()
 
+
     conv_handler = ConversationHandler(
-        entry_points=[MessageHandler(filters.PHOTO, handle_photo)],
+        entry_points=[MessageHandler(filters.PHOTO & ~filters.COMMAND, handle_photo)],
         states={
-            WAITING_PROMPT: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_prompt)],
             WAITING_CONFIRM: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_confirm)],
         },
         fallbacks=[CommandHandler('cancel', cancel)],
@@ -351,7 +421,7 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("add", handle_admin_add))
     app.add_handler(conv_handler)
-
+    app.add_handler(CallbackQueryHandler(handle_callback))
     print(f"Бот запущен. Output dir: {COMFYUI_OUTPUT_DIR}")
     app.run_polling()
 
