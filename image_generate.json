@@ -1,0 +1,641 @@
+{
+  "1": {
+    "inputs": {
+      "ckpt_name": "hyphoriaIlluNAI_v001.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Load Checkpoint"
+    }
+  },
+  "4": {
+    "inputs": {
+      "text": "asterpiece, best quality, very aesthetic, amazing quality, absurdres, newest, simple background.BREAK.\nfull body,black background.BREAK. \nelf,elf eyars,girl,solo,big breast,middle age woman,sexual body, white square hair, black skirt, black transparent stockings, yellow crop top,without shoes,without sleeves, full body",
+      "clip": [
+        "84",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "POSITIVE PROMT"
+    }
+  },
+  "5": {
+    "inputs": {
+      "text": "(worst quality, low quality, very displeasing, lowres),(interlocked fingers, badly drawn hands and fingers, anatomically incorrect hands),blurry,watermark,multiple views,comic,censored,jpeg artifacts,patreon logo,patreon username,web address,signature,watermark,text,logo,artist name,safe_neg,unfinished,displeasing,oldest,early,chromatic aberration,signature,artistic error,scan,",
+      "clip": [
+        "84",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "NEGATIVE PROMT"
+    }
+  },
+  "6": {
+    "inputs": {
+      "width": 592,
+      "height": 1000,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Empty Latent Image"
+    }
+  },
+  "45": {
+    "inputs": {
+      "rgthree_comparer": {
+        "images": [
+          {
+            "name": "A",
+            "selected": true,
+            "url": "/api/view?filename=rgthree.compare._temp_uombk_00007_.png&type=temp&subfolder=&rand=0.8818697993189192"
+          },
+          {
+            "name": "B",
+            "selected": true,
+            "url": "/api/view?filename=rgthree.compare._temp_uombk_00008_.png&type=temp&subfolder=&rand=0.5067790983571415"
+          }
+        ]
+      },
+      "image_a": [
+        "79:59",
+        0
+      ],
+      "image_b": [
+        "79:48",
+        0
+      ]
+    },
+    "class_type": "Image Comparer (rgthree)",
+    "_meta": {
+      "title": "Image Comparer (rgthree)"
+    }
+  },
+  "50": {
+    "inputs": {
+      "rgthree_comparer": {
+        "images": [
+          {
+            "name": "A",
+            "selected": true,
+            "url": "/api/view?filename=rgthree.compare._temp_xvppg_00021_.png&type=temp&subfolder=&rand=0.6368199259194705"
+          },
+          {
+            "name": "B",
+            "selected": true,
+            "url": "/api/view?filename=rgthree.compare._temp_xvppg_00022_.png&type=temp&subfolder=&rand=0.07174302046978531"
+          }
+        ]
+      },
+      "image_a": [
+        "79:48",
+        0
+      ],
+      "image_b": [
+        "79:8",
+        0
+      ]
+    },
+    "class_type": "Image Comparer (rgthree)",
+    "_meta": {
+      "title": "Image Comparer (rgthree)"
+    }
+  },
+  "84": {
+    "inputs": {
+      "PowerLoraLoaderHeaderWidget": {
+        "type": "PowerLoraLoaderHeaderWidget"
+      },
+      "lora_1": {
+        "on": true,
+        "lora": "image/r17329_illuu.safetensors",
+        "strength": 0.39
+      },
+      "lora_2": {
+        "on": true,
+        "lora": "image/illustrious_masterpieces_v3.safetensors",
+        "strength": 0.21
+      },
+      "lora_3": {
+        "on": true,
+        "lora": "image/ma1ma1helmes_b-000014.safetensors",
+        "strength": 0.65
+      },
+      "lora_4": {
+        "on": false,
+        "lora": "image/MGE_V6.1_IL_Final_R1.safetensors",
+        "strength": 0.317578125
+      },
+      "lora_5": {
+        "on": false,
+        "lora": "image/People'sWorks_v9_Illusv1.0_128dim.safetensors",
+        "strength": 0.7136718750000002
+      },
+      "lora_6": {
+        "on": true,
+        "lora": "image/𝐓𝐡𝐞_𝐨𝐧𝐥𝐲_𝐋𝐨𝐑𝐀_𝐲𝐨𝐮_𝐞𝐯𝐞𝐫_𝐧𝐞𝐞𝐝__必要なのはLoRAだけ__by_CHROMEKIDD.safetensors",
+        "strength": 0.48
+      },
+      "➕ Add Lora": "",
+      "model": [
+        "1",
+        0
+      ],
+      "clip": [
+        "1",
+        1
+      ]
+    },
+    "class_type": "Power Lora Loader (rgthree)",
+    "_meta": {
+      "title": "LORA 1"
+    }
+  },
+  "85": {
+    "inputs": {
+      "PowerLoraLoaderHeaderWidget": {
+        "type": "PowerLoraLoaderHeaderWidget"
+      },
+      "lora_1": {
+        "on": true,
+        "lora": "image/r17329_illuu.safetensors",
+        "strength": 0.11
+      },
+      "lora_2": {
+        "on": true,
+        "lora": "image/illustrious_masterpieces_v3.safetensors",
+        "strength": 0.08
+      },
+      "lora_3": {
+        "on": true,
+        "lora": "image/ma1ma1helmes_b-000014.safetensors",
+        "strength": 0.1
+      },
+      "➕ Add Lora": "",
+      "model": [
+        "1",
+        0
+      ],
+      "clip": [
+        "1",
+        1
+      ]
+    },
+    "class_type": "Power Lora Loader (rgthree)",
+    "_meta": {
+      "title": "LORA 2"
+    }
+  },
+  "86": {
+    "inputs": {
+      "images": [
+        "79:8",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Preview Image"
+    }
+  },
+  "88": {
+    "inputs": {
+      "image": "depth_00009_ (3).png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image"
+    }
+  },
+  "79:54": {
+    "inputs": {
+      "UNKNOWN": "bbox/hand_yolov8s.pt"
+    },
+    "_meta": {}
+  },
+  "79:53": {
+    "inputs": {
+      "UNKNOWN": "all",
+      "bbox_detector": [
+        "79:54",
+        0
+      ],
+      "image": [
+        "79:38",
+        0
+      ]
+    },
+    "_meta": {}
+  },
+  "79:34": {
+    "inputs": {
+      "UNKNOWN": "all",
+      "segm_detector": [
+        "79:36",
+        1
+      ],
+      "image": [
+        "79:57",
+        0
+      ]
+    },
+    "_meta": {}
+  },
+  "79:60": {
+    "inputs": {
+      "UNKNOWN": "all",
+      "bbox_detector": [
+        "79:61",
+        0
+      ],
+      "image": [
+        "79:51",
+        0
+      ]
+    },
+    "_meta": {}
+  },
+  "79:59": {
+    "inputs": {
+      "UNKNOWN": false,
+      "image": [
+        "79:51",
+        0
+      ],
+      "segs": [
+        "79:60",
+        0
+      ],
+      "basic_pipe": [
+        "79:23",
+        0
+      ]
+    },
+    "_meta": {}
+  },
+  "79:38": {
+    "inputs": {
+      "UNKNOWN": false,
+      "image": [
+        "79:57",
+        0
+      ],
+      "segs": [
+        "79:34",
+        0
+      ],
+      "basic_pipe": [
+        "79:10",
+        0
+      ]
+    },
+    "_meta": {}
+  },
+  "79:51": {
+    "inputs": {
+      "UNKNOWN": false,
+      "image": [
+        "79:38",
+        0
+      ],
+      "segs": [
+        "79:53",
+        0
+      ],
+      "basic_pipe": [
+        "79:23",
+        0
+      ]
+    },
+    "_meta": {}
+  },
+  "79:61": {
+    "inputs": {
+      "UNKNOWN": "bbox/99coins_anime_girl_face_box.pt"
+    },
+    "_meta": {}
+  },
+  "79:40": {
+    "inputs": {
+      "images": [
+        "79:38",
+        5
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Preview Image"
+    }
+  },
+  "79:62": {
+    "inputs": {
+      "images": [
+        "79:59",
+        5
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Preview Image"
+    }
+  },
+  "79:8": {
+    "inputs": {
+      "samples": [
+        "79:3",
+        0
+      ],
+      "vae": [
+        "1",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "79:10": {
+    "inputs": {
+      "model": [
+        "85",
+        0
+      ],
+      "clip": [
+        "85",
+        1
+      ],
+      "vae": [
+        "1",
+        2
+      ],
+      "positive": [
+        "4",
+        0
+      ],
+      "negative": [
+        "4",
+        0
+      ]
+    },
+    "_meta": {}
+  },
+  "79:48": {
+    "inputs": {
+      "samples": [
+        "79:47",
+        0
+      ],
+      "vae": [
+        "1",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "79:57": {
+    "inputs": {
+      "upscale_model": [
+        "79:56",
+        0
+      ],
+      "image": [
+        "79:48",
+        0
+      ]
+    },
+    "class_type": "ImageUpscaleWithModel",
+    "_meta": {
+      "title": "Upscale Image (using Model)"
+    }
+  },
+  "79:23": {
+    "inputs": {
+      "basic_pipe": [
+        "79:10",
+        0
+      ]
+    },
+    "_meta": {}
+  },
+  "79:39": {
+    "inputs": {
+      "filename_prefix": "detailed",
+      "images": [
+        "79:59",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Image"
+    }
+  },
+  "79:55": {
+    "inputs": {
+      "images": [
+        "79:51",
+        5
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Preview Image"
+    }
+  },
+  "79:56": {
+    "inputs": {
+      "model_name": "2x-AnimeSharpV4_RCAN.safetensors"
+    },
+    "class_type": "UpscaleModelLoader",
+    "_meta": {
+      "title": "Load Upscale Model"
+    }
+  },
+  "79:36": {
+    "inputs": {
+      "UNKNOWN": "segm/person_yolov8m-seg.pt"
+    },
+    "_meta": {}
+  },
+  "79:46": {
+    "inputs": {
+      "upscale_method": "bicubic",
+      "scale_by": 1.25,
+      "samples": [
+        "79:3",
+        0
+      ]
+    },
+    "class_type": "LatentUpscaleBy",
+    "_meta": {
+      "title": "Upscale Latent By"
+    }
+  },
+  "79:47": {
+    "inputs": {
+      "seed": 572039885248643,
+      "steps": 35,
+      "cfg": 3.1,
+      "sampler_name": "dpmpp_2m_sde",
+      "scheduler": "karras",
+      "denoise": 0.47,
+      "model": [
+        "85",
+        0
+      ],
+      "positive": [
+        "4",
+        0
+      ],
+      "negative": [
+        "5",
+        0
+      ],
+      "latent_image": [
+        "79:46",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "79:12": {
+    "inputs": {
+      "text": "",
+      "clip": [
+        "84",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "79:11": {
+    "inputs": {
+      "text": "detailed",
+      "clip": [
+        "84",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "79:72": {
+    "inputs": {
+      "images": [
+        "79:8",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Preview Image"
+    }
+  },
+  "79:3": {
+    "inputs": {
+      "seed": 692784915640704,
+      "steps": 30,
+      "cfg": 2.5,
+      "sampler_name": "dpmpp_2m_sde",
+      "scheduler": "karras",
+      "denoise": 1,
+      "model": [
+        "84",
+        0
+      ],
+      "positive": [
+        "79:79",
+        0
+      ],
+      "negative": [
+        "79:79",
+        1
+      ],
+      "latent_image": [
+        "6",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "79:84": {
+    "inputs": {
+      "UNKNOWN": "depth_anything_v2_vitl_fp32.safetensors"
+    },
+    "_meta": {
+      "title": "model d a"
+    }
+  },
+  "79:86": {
+    "inputs": {
+      "control_net_name": "control-lora-depth-rank256.safetensors"
+    },
+    "class_type": "ControlNetLoader",
+    "_meta": {
+      "title": "Load ControlNet Model"
+    }
+  },
+  "79:83": {
+    "inputs": {
+      "da_model": [
+        "79:84",
+        0
+      ],
+      "images": [
+        "88",
+        0
+      ]
+    },
+    "_meta": {}
+  },
+  "79:79": {
+    "inputs": {
+      "strength": 1.38,
+      "start_percent": 0,
+      "end_percent": 1,
+      "positive": [
+        "4",
+        0
+      ],
+      "negative": [
+        "5",
+        0
+      ],
+      "control_net": [
+        "79:86",
+        0
+      ],
+      "image": [
+        "79:83",
+        0
+      ],
+      "vae": [
+        "1",
+        2
+      ]
+    },
+    "class_type": "ControlNetApplyAdvanced",
+    "_meta": {
+      "title": "Apply ControlNet"
+    }
+  }
+}
