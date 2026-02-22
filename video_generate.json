@@ -88,7 +88,7 @@
   },
   "116": {
     "inputs": {
-      "unet_name": "DasiwaWAN22I2V14BTastysinV8_q4High.gguf"
+      "unet_name": "DasiwaWAN22I2V14BTastysinV8_q5High.gguf"
     },
     "class_type": "UnetLoaderGGUF",
     "_meta": {
@@ -97,7 +97,7 @@
   },
   "117": {
     "inputs": {
-      "unet_name": "DasiwaWAN22I2V14BTastysinV8_q4Low.gguf"
+      "unet_name": "DasiwaWAN22I2V14BTastysinV8_q5Low.gguf"
     },
     "class_type": "UnetLoaderGGUF",
     "_meta": {
