@@ -1,5 +1,9 @@
 # Гайд
 
+> Установка приспособлена только для linux дистрибутивов (arch-based, redhat-based, debian-based)
+> 
+> любые вопросы -> qaws3623@gmail.com
+
 ## Установка ComfyUI
 git clone https://github.com/Comfy-Org/ComfyUI.git && cd ComfyUI
 
