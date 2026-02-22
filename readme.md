@@ -2,6 +2,8 @@
 
 > Установка приспособлена только для linux дистрибутивов (arch-based, redhat-based, debian-based)
 > 
+> для корректной работы скрипта down_models необходимо указать api ключ с личного кабинета civitai
+>
 > любые вопросы -> qaws3623@gmail.com
 
 ## Установка ComfyUI
