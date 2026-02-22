@@ -9,7 +9,7 @@ pip install torch torchvision torchaudio --extra-index-url https://download.pyto
 
 pip install -r requirements.txt && pip install -r manager_requirements.txt
 
-python main.py --enable-manager-legacy-ui
+python main.py --enable-manager
 
 ## Установка бота + моделей
 cd && git clone https://github.com/s13bby/tgbotcomf.git

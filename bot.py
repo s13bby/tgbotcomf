@@ -21,9 +21,10 @@ TELEGRAM_TOKEN = "TELEGRAM_TOKEN"
 COMFYUI_URL = "http://127.0.0.1:8188"
 COMFYUI_OUTPUT_DIR = "output/"
 COMFYUI_INPUT_DIR = "input/"
-COMFYUI_COMMON_PROMT = "woman take off her clothes, full nudity, full naked, pyssy, boobs, nipples. camera zooms out"
+COMFYUI_COMMON_PROMT = ["woman take off her clothes, full nudity, full naked, pyssy, boobs, nipples. camera zooms out",""]
 COMFYUI_MAX_SIZE = 580
-ADMIN_IDS = [1145483994, 498845556, 111111111, 222222222, 333333333]
+COMFYUI_COST = 20
+ADMIN_IDS = [1145483994, 498845556]
 
 WAITING_CONFIRM = 0
 
@@ -163,7 +164,7 @@ def find_video_by_prefix(output_dir, prefix, extensions=('.mp4', '.webm', '.mkv'
 async def run_comfyui_workflow(workflow_json_str, input_image_path, video_prefix, update: Update):
     workflow_dict = json.loads(workflow_json_str)
     client_id = str(uuid.uuid4())
--
+
     async with aiohttp.ClientSession() as session:
         async with session.post(f"{COMFYUI_URL}/prompt", json={
             "prompt": workflow_dict,
@@ -294,19 +295,33 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     video_prefix = f"video_{uuid.uuid4().hex[:12]}"
     context.user_data['video_prefix'] = video_prefix
 
-    cost = 20
+    cost = COMFYUI_COST
     balance = get_user_balance(update.effective_user.id)
+    
+    keyboard = [
+        [InlineKeyboardButton("✅ Начать (Пресет 1)", callback_data="preset_1")],
+        [InlineKeyboardButton("🎭 Начать (Пресет 2)", callback_data="preset_2")],
+        [InlineKeyboardButton("❌ Отмена", callback_data="cancel_gen")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
     await update.message.reply_text(
         f"Стоимость генерации: {cost} токенов.\n"
         f"Ваш баланс: {balance}\n"
-        "Начать генерацию? (да/нет)"
+        "Выберите пресет для генерации:",
+        reply_markup=reply_markup
     )
-    return WAITING_CONFIRM
+    
+    return ConversationHandler.END 
+
+async def handle_photo_anywhere(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    return await handle_photo(update, context)
 
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    
+    if query.data == "preset_1":COMFYUI_COMMON_PROMT[0]
+    if query.data == "preset_2":COMFYUI_COMMON_PROMT[1]
     if query.data == RULES_CALLBACK:
         keyboard = [[InlineKeyboardButton("← Назад", callback_data=BACK_CALLBACK)]]
         await query.message.reply_text(
@@ -321,7 +336,22 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
         await query.message.delete()
-    
+    elif query.data == "preset_1":
+        await query.answer()
+        await start_generation(update, context, preset_index=0)
+
+    elif query.data == "preset_2":
+        await query.answer()
+        await start_generation(update, context, preset_index=1)
+
+    elif query.data == "cancel_gen":
+        await query.answer()
+        image_path = context.user_data.get('image_path')
+        if image_path and os.path.exists(image_path):
+            os.unlink(image_path)
+        context.user_data.clear()
+        await query.message.edit_text("Операция отменена.")
+
     elif query.data == BACK_CALLBACK:
         context.user_data.clear()
         
@@ -340,69 +370,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await query.message.delete()
 
-async def handle_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text.lower()
-    if text not in ['да', 'yes', 'y']:
-        await update.message.reply_text("Операция отменена.")
-        image_path = context.user_data.get('image_path')
-        if image_path and os.path.exists(image_path):
-            os.unlink(image_path)
-        context.user_data.clear()
-        return ConversationHandler.END
-
-    user_id = update.effective_user.id
-    cost = 20
-    balance = get_user_balance(user_id)
-    if balance < cost:
-        await update.message.reply_text("Недостаточно токенов.")
-        return ConversationHandler.END
-
-    deduct_balance(user_id, cost)
-    await update.message.reply_text("🚀 Начинаю генерацию...")
-
-    try:
-        user_id = update.effective_user.id
-        image_path = context.user_data['image_path']
-        video_prefix = context.user_data['video_prefix']
-
-        os.makedirs(COMFYUI_INPUT_DIR, exist_ok=True)
-        image_filename = f"user_image_{uuid.uuid4().hex[:12]}.png"
-        input_image_path = os.path.join(COMFYUI_INPUT_DIR, image_filename)
-        shutil.copy(image_path, input_image_path)
-
-        async with aiofiles.open(COMFYUI_WORKFLOW, 'r', encoding='utf-8') as f:
-            workflow_base = await f.read()
-
-        modified_workflow = modify_workflow(
-            workflow_base,
-            "",
-            image_filename,
-            context.user_data['width'],
-            context.user_data['height'],
-            video_prefix
-        )
-
-        video_path = await run_comfyui_workflow(modified_workflow, input_image_path, video_prefix, update)
-        video_path = clean_metadata(video_path)
-
-        with open(video_path, 'rb') as video_file:
-            await update.message.reply_video(video_file, supports_streaming=True)
-
-        await update.message.reply_text("✅ Генерация завершена!")
-
-        for p in [image_path, input_image_path, video_path]:
-            if os.path.exists(p):
-                os.unlink(p)
-
-    except Exception as e:
-        await update.message.reply_text(f"❌ Ошибка генерации: {str(e)}")
-        update_balance(user_id, cost) 
-
-    new_balance = get_user_balance(user_id)
-    await update.message.reply_text(f"Ваш баланс: {new_balance} токенов.")
-    context.user_data.clear()
-    return ConversationHandler.END
-
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Отменено.")
     image_path = context.user_data.get('image_path')
@@ -411,6 +378,62 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
     return ConversationHandler.END
 
+async def start_generation(update: Update, context: ContextTypes.DEFAULT_TYPE, preset_index: int):
+    query = update.callback_query
+    user_id = update.effective_user.id
+
+    cost = COMFYUI_COST
+    balance = get_user_balance(user_id)
+    if balance < cost:
+        await query.edit_message_text("❌ Недостаточно токенов.")
+        context.user_data.clear()
+        return
+
+    deduct_balance(user_id, cost)
+    await query.edit_message_text("🚀 Начинаю генерацию...")
+
+    try:
+        image_path = context.user_data['image_path']
+        video_prefix = context.user_data['video_prefix']
+        selected_prompt = COMFYUI_COMMON_PROMT[preset_index]
+
+        os.makedirs(COMFYUI_INPUT_DIR, exist_ok=True)
+        image_filename = f"user_image_{uuid.uuid4().hex[:12]}.png"
+        input_image_path = os.path.join(COMFYUI_INPUT_DIR, image_filename)
+        shutil.copy(image_path, input_image_path)
+
+        with open(COMFYUI_WORKFLOW, 'r', encoding='utf-8') as f:
+            workflow_base = f.read()
+
+        modified_workflow = modify_workflow(
+            workflow_base,
+            selected_prompt,
+            image_filename,
+            context.user_data['width'],
+            context.user_data['height'],
+            video_prefix
+        )
+
+        video_path = await run_comfyui_workflow(modified_workflow, input_image_path, video_prefix)
+        video_path = clean_metadata(video_path)
+
+        with open(video_path, 'rb') as video_file:
+            await query.message.reply_video(video_file, supports_streaming=True)
+
+        await query.message.reply_text("✅ Генерация завершена!")
+
+        for p in [image_path, input_image_path, video_path]:
+            if os.path.exists(p):
+                os.unlink(p)
+
+    except Exception as e:
+        await query.message.reply_text(f"❌ Ошибка генерации: {str(e)}")
+        update_balance(user_id, cost)
+
+    new_balance = get_user_balance(user_id)
+    await query.message.reply_text(f"Ваш баланс: {new_balance} токенов.")
+    context.user_data.clear()
+
 def main():
     init_db()
     app = Application.builder().token(TELEGRAM_TOKEN).build()
@@ -418,10 +441,8 @@ def main():
 
     conv_handler = ConversationHandler(
         entry_points=[MessageHandler(filters.PHOTO & ~filters.COMMAND, handle_photo)],
-        states={
-            WAITING_CONFIRM: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_confirm)],
-        },
-        fallbacks=[CommandHandler('cancel', cancel)],
+        states={},
+        fallbacks=[],
     )
 
     app.add_handler(CommandHandler("start", start))
