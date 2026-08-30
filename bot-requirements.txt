@@ -1,6 +1,0 @@
-python-telegram-bot --pre
-Pillow
-requests
-aiohttp
-aiofiles
-websockets
